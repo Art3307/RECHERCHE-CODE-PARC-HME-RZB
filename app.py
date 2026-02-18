@@ -60,7 +60,7 @@ df = load_data()
 with st.sidebar:
     st.header("⚙️ Options")
     direction = st.selectbox("Sens", ["HME ➜ RZB", "RZB ➜ HME"])
-    mode = st.radio("Mode", ["Contient (partiel)"])
+    mode = st.radio("Mode", ["Contient"])
 
 # ----------------------------
 # Définition des colonnes selon sens
@@ -104,3 +104,4 @@ if query:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
