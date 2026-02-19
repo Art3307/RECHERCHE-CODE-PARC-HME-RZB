@@ -59,7 +59,6 @@ def norm_immat(s: str) -> str:
     AB-123-CD / AB 123 CD / AB123CD -> AB123CD
     """
     s = norm_text(s)
-    # garde lettres/chiffres uniquement
     return re.sub(r"[^A-Z0-9]", "", s)
 
 def is_blank(x: str) -> bool:
@@ -105,8 +104,8 @@ df = load_data()
 with st.sidebar:
     st.header("⚙️ Options")
     mode = st.radio("Mode de recherche", ["Exact", "Contient (partiel)"], index=1)
-    st.caption("Recherche sur HME, RZB, Immat, Agence, Libellé.")
     show_table_on_single = st.checkbox("Afficher le tableau si plusieurs résultats", value=True)
+    st.caption("Astuce : en mode 'Contient', la recherche multi-mots est en ET (AND). Ex: 'pelle bassin'.")
 
 # ----------------------------
 # Recherche (fonction commune)
@@ -116,28 +115,49 @@ def search_df(df_: pd.DataFrame, query: str, mode_: str) -> pd.DataFrame:
     if not q_raw:
         return df_.iloc[0:0].copy()
 
-    # Pour les immats, on compare aussi une version normalisée
     q_immat = norm_immat(q_raw)
 
+    # Colonnes (préparées)
+    hme = df_["PARC_HME"]
+    rzb = df_["PARC_RZB"]
+    imm = df_["IMMATRICULATION"]
+    imm_norm = df_["IMM_NORM"]
+    agence = df_["AGENCE"].astype(str).map(norm_text)
+    libelle = df_["LIBELLE"].astype(str).map(norm_text)
+
+    # 1) EXACT : codes / immat exact
     if mode_ == "Exact":
-        # Exact: HME/RZB exact, Immat exact (normalisé aussi)
         return df_[
-            (df_["PARC_HME"] == q_raw) |
-            (df_["PARC_RZB"] == q_raw) |
-            (df_["IMMATRICULATION"] == q_raw) |
-            ((df_["IMM_NORM"] == q_immat) & (q_immat != ""))
+            (hme == q_raw) |
+            (rzb == q_raw) |
+            (imm == q_raw) |
+            ((imm_norm == q_immat) & (q_immat != ""))
         ].copy()
 
-    # Contient: recherche "mots-clés" sur toutes les colonnes utiles
-    # IMPORTANT: regex=False pour éviter les soucis si la recherche contient des caractères spéciaux
-    return df_[
-        df_["PARC_HME"].str.contains(q_raw, na=False, regex=False) |
-        df_["PARC_RZB"].str.contains(q_raw, na=False, regex=False) |
-        df_["IMMATRICULATION"].str.contains(q_raw, na=False, regex=False) |
-        df_["IMM_NORM"].str.contains(q_immat, na=False, regex=False) |
-        df_["AGENCE"].astype(str).map(norm_text).str.contains(q_raw, na=False, regex=False) |
-        df_["LIBELLE"].astype(str).map(norm_text).str.contains(q_raw, na=False, regex=False)
-    ].copy()
+    # 2) CONTIENT : multi-mots (AND) partout
+    # Exemple: "pelle bassin" => doit contenir "PELLE" ET "BASSIN" dans au moins une colonne chacun
+    tokens = [t for t in re.split(r"\s+", q_raw) if t]
+
+    mask = pd.Series(True, index=df_.index)
+    for tok in tokens:
+        tok = norm_text(tok)
+        tok_immat = norm_immat(tok)
+
+        one_tok_mask = (
+            hme.str.contains(tok, na=False, regex=False) |
+            rzb.str.contains(tok, na=False, regex=False) |
+            imm.str.contains(tok, na=False, regex=False) |
+            agence.str.contains(tok, na=False, regex=False) |
+            libelle.str.contains(tok, na=False, regex=False)
+        )
+
+        # Si token ressemble à une immat (ou contient tirets/espaces), on teste aussi la version normalisée
+        if tok_immat:
+            one_tok_mask = one_tok_mask | imm_norm.str.contains(tok_immat, na=False, regex=False)
+
+        mask = mask & one_tok_mask  # AND entre tokens
+
+    return df_[mask].copy()
 
 def render_big_card(row: pd.Series, user_query: str):
     q = norm_text(user_query)
@@ -145,7 +165,7 @@ def render_big_card(row: pd.Series, user_query: str):
     typed_is_rzb = q.startswith("X")
     typed_immat_like = (not typed_is_hme and not typed_is_rzb and norm_immat(q) != "")
 
-    # En gros : le "code opposé" si on a tapé HME ou RZB, sinon RZB par défaut
+    # En gros : code opposé si HME/RZB tapé, sinon RZB par défaut
     if typed_is_hme:
         big_value, big_label = row["PARC_RZB"], "RZB"
     elif typed_is_rzb:
@@ -169,12 +189,12 @@ def render_big_card(row: pd.Series, user_query: str):
     </div>
     """, unsafe_allow_html=True)
 
-def results_table(res: pd.DataFrame):
+def results_table(res: pd.DataFrame, filename: str):
     cols = ["AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE"]
     st.dataframe(res[cols], use_container_width=True)
 
     csv = res[cols].to_csv(index=False, sep=";").encode("utf-8")
-    st.download_button("⬇️ Télécharger les résultats (CSV)", data=csv, file_name="resultats_parc.csv", mime="text/csv")
+    st.download_button("⬇️ Télécharger les résultats (CSV)", data=csv, file_name=filename, mime="text/csv")
 
 # ----------------------------
 # UI : onglets (Simple / Multi)
@@ -183,8 +203,8 @@ tab1, tab2 = st.tabs(["Recherche simple", "Multi-recherche (liste)"])
 
 with tab1:
     query = st.text_input(
-        "Tape un code HME (H0…), RZB (X…), une immatriculation, ou un mot-clé (ex: BASSIN)",
-        placeholder="Ex: H01100M / X001L / AB-123-CD / BASSIN"
+        "Tape un code HME (H0…), RZB (X…), une immatriculation, ou des mots-clés (ex: pelle bassin)",
+        placeholder="Ex: H01100M / X001L / AB-123-CD / pelle bassin"
     )
 
     if query:
@@ -193,17 +213,15 @@ with tab1:
         if res.empty:
             st.error("❌ Aucun résultat trouvé")
         else:
-            # carte du premier résultat
             render_big_card(res.iloc[0], query)
 
-            # si plusieurs résultats (ex: BASSIN), on affiche le tableau complet
             if len(res) > 1 and show_table_on_single:
                 st.info(f"✅ {len(res)} résultats trouvés.")
-                results_table(res)
+                results_table(res, "resultats_parc.csv")
 
 with tab2:
-    st.write("Colle une liste de codes / mots-clés (1 par ligne). Exemple :")
-    st.code("H01100M\nX001L\nAB-123-CD\nBASSIN", language="text")
+    st.write("Colle une liste (1 entrée par ligne). Tu peux aussi mettre des mots-clés :")
+    st.code("H01100M\nX001L\nAB-123-CD\npelle bassin", language="text")
 
     raw_list = st.text_area("Liste", height=180, placeholder="1 entrée par ligne…")
     if raw_list.strip():
