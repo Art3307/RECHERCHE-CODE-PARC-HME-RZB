@@ -104,7 +104,7 @@ df = load_data()
 # ----------------------------
 with st.sidebar:
     st.header("⚙️ Options")
-    mode = st.radio("Mode de recherche", ["Contient (partiel)"], index=1)
+    mode = st.radio("Mode de recherche", ["Exact", "Contient (partiel)"], index=1)
     st.caption("Recherche sur HME, RZB, Immat, Agence, Libellé.")
     show_table_on_single = st.checkbox("Afficher le tableau si plusieurs résultats", value=True)
 
@@ -229,4 +229,3 @@ with tab2:
 
             csv = out[cols].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇️ Télécharger (CSV)", data=csv, file_name="multi_resultats_parc.csv", mime="text/csv")
-
