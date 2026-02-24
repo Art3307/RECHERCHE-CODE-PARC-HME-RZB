@@ -321,7 +321,7 @@ tab1, tab2 = st.tabs(["Recherche simple", "Multi-recherche (liste)"])
 
 with tab1:
     query = st.text_input(
-        "Tape un code HME (H0…), RZB (X…), une immatriculation, ou des mots-clés (ex: pelle bassin)",
+        "Tape un code HME, RZB, une immatriculation, ou des mots-clés (ex: pelle bassin)",
         placeholder="Ex: H01100M / X001L / AB-123-CD / pelle bassin"
     )
 
