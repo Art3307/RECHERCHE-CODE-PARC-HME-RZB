@@ -2,19 +2,50 @@ import streamlit as st
 import pandas as pd
 import re
 
-st.set_page_config(page_title="Recherche Parc HME ↔ RZB", layout="centered")
+st.set_page_config(
+    page_title="Recherche Parc HME ↔ RZB",
+    layout="centered",
+    initial_sidebar_state="collapsed"  # ✅ options masquées par défaut
+)
 st.title("🔎 Recherche Parc : HME ↔ RZB")
 
 # ----------------------------
-# STYLE
+# STYLE (fond noir + liseré orange)
 # ----------------------------
 st.markdown("""
 <style>
+/* Fond global */
+.stApp {
+    background: #0b0b0b;
+    color: #f2f2f2;
+}
+
+/* Inputs / widgets plus lisibles */
+.stTextInput input, .stTextArea textarea {
+    background: #121212 !important;
+    color: #f2f2f2 !important;
+    border: 1px solid rgba(255,165,0,.35) !important;
+}
+.stTextInput label, .stTextArea label, .stRadio label, .stCaption {
+    color: rgba(255,255,255,.85) !important;
+}
+
+/* Boutons */
+.stButton button {
+    background: #141414 !important;
+    color: #f2f2f2 !important;
+    border: 1px solid rgba(255,165,0,.55) !important;
+}
+.stButton button:hover {
+    border: 1px solid rgba(255,165,0,.9) !important;
+}
+
+/* Encadré général (orange) */
 .big-result {
-    padding: 25px;
-    border-radius: 15px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(255,255,255,0.05);
+    padding: 22px;
+    border-radius: 16px;
+    border: 2px solid rgba(255,165,0,.85);   /* ✅ liseré orange */
+    background: rgba(255,255,255,0.03);
     margin-top: 18px;
     text-align: center;
 }
@@ -23,10 +54,11 @@ st.markdown("""
     font-weight: 900;
     margin-bottom: 10px;
     letter-spacing: 1px;
+    color: #ffa500; /* orange */
 }
 .meta {
     font-size: 18px;
-    opacity: 0.92;
+    opacity: 0.95;
     text-align: left;
     max-width: 620px;
     margin: 0 auto;
@@ -41,23 +73,25 @@ st.markdown("""
     display: inline-block;
     padding: 6px 10px;
     border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.15);
-    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,165,0,.75);
+    background: rgba(255,165,0,.08);
+    color: #ffd18a;
 }
 
-/* Colonne série à droite */
+/* Colonne série à droite (orange) */
 .series-card {
-    padding: 25px;
-    border-radius: 15px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(255,255,255,0.05);
+    padding: 22px;
+    border-radius: 16px;
+    border: 2px solid rgba(255,165,0,.85);   /* ✅ liseré orange */
+    background: rgba(255,255,255,0.03);
     margin-top: 18px;
 }
 .series-title {
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
     opacity: 0.95;
     margin-bottom: 10px;
+    color: #ffd18a;
 }
 .series-row {
     margin: 10px 0;
@@ -66,9 +100,9 @@ st.markdown("""
 }
 .series-label {
     display: inline-block;
-    min-width: 140px;
+    min-width: 150px;
     opacity: 0.85;
-    font-weight: 600;
+    font-weight: 700;
 }
 .series-value {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -78,6 +112,13 @@ st.markdown("""
     opacity: 0.8;
     font-style: italic;
     margin-top: 8px;
+}
+
+/* Dataframe look sombre */
+[data-testid="stDataFrame"] {
+    border: 1px solid rgba(255,165,0,.35);
+    border-radius: 12px;
+    overflow: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -109,7 +150,6 @@ SERIAL_COLS = ["N° SERIE", "N° SERIE GRUE"]
 @st.cache_data
 def load_data():
     df = pd.read_excel("PARC RZB (version 1).xlsx", sheet_name="Feuil2", header=2)
-
     df.columns = [str(c).strip() for c in df.columns]
 
     rename_map = {
@@ -150,23 +190,9 @@ def load_data():
 df = load_data()
 
 # ----------------------------
-# Options
+# Recherche (CONTIENT uniquement)
 # ----------------------------
-with st.sidebar:
-    st.header("⚙️ Options")
-    mode = st.radio("Mode de recherche", ["Exact", "Contient (partiel)"], index=1)
-    st.caption("En mode 'Contient', la recherche multi-mots est en ET (AND). Ex: 'pelle bassin'.")
-
-    missing = [c for c in SERIAL_COLS if c not in df.columns]
-    if not missing:
-        st.success("Colonnes série OK : N° SERIE + N° SERIE GRUE")
-    else:
-        st.warning("Colonnes série manquantes : " + ", ".join(missing))
-
-# ----------------------------
-# Recherche
-# ----------------------------
-def search_df(df_: pd.DataFrame, query: str, mode_: str) -> pd.DataFrame:
+def search_df_contains(df_: pd.DataFrame, query: str) -> pd.DataFrame:
     q_raw = norm_text(query)
     if not q_raw:
         return df_.iloc[0:0].copy()
@@ -180,17 +206,9 @@ def search_df(df_: pd.DataFrame, query: str, mode_: str) -> pd.DataFrame:
     agence = df_["AGENCE"].astype(str).map(norm_text) if "AGENCE" in df_.columns else pd.Series("", index=df_.index)
     libelle = df_["LIBELLE"].astype(str).map(norm_text) if "LIBELLE" in df_.columns else pd.Series("", index=df_.index)
 
-    if mode_ == "Exact":
-        return df_[
-            (hme == q_raw) |
-            (rzb == q_raw) |
-            (imm == q_raw) |
-            ((imm_norm == q_immat) & (q_immat != ""))
-        ].copy()
-
     tokens = [t for t in re.split(r"\s+", q_raw) if t]
-
     mask = pd.Series(True, index=df_.index)
+
     for tok in tokens:
         tok = norm_text(tok)
         tok_immat = norm_immat(tok)
@@ -202,7 +220,6 @@ def search_df(df_: pd.DataFrame, query: str, mode_: str) -> pd.DataFrame:
             agence.str.contains(tok, na=False, regex=False) |
             libelle.str.contains(tok, na=False, regex=False)
         )
-
         if tok_immat:
             one_tok_mask = one_tok_mask | imm_norm.str.contains(tok_immat, na=False, regex=False)
 
@@ -210,6 +227,9 @@ def search_df(df_: pd.DataFrame, query: str, mode_: str) -> pd.DataFrame:
 
     return df_[mask].copy()
 
+# ----------------------------
+# Affichage
+# ----------------------------
 def render_series_side(row: pd.Series):
     s1 = clean_serial(row.get("N° SERIE", "")) if "N° SERIE" in row.index else ""
     s2 = clean_serial(row.get("N° SERIE GRUE", "")) if "N° SERIE GRUE" in row.index else ""
@@ -269,7 +289,7 @@ def render_big_card(row: pd.Series, user_query: str):
 def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
     cols = ["AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE"]
 
-    st.caption("Clique une ligne pour afficher le détail en dessous 👇")
+    st.caption("Clique une ligne pour afficher le résultat 👇")
 
     event = st.dataframe(
         res[cols],
@@ -295,7 +315,7 @@ def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
     return selected_pos
 
 # ----------------------------
-# UI : onglets
+# UI
 # ----------------------------
 tab1, tab2 = st.tabs(["Recherche simple", "Multi-recherche (liste)"])
 
@@ -306,7 +326,7 @@ with tab1:
     )
 
     if query:
-        res = search_df(df, query, mode)
+        res = search_df_contains(df, query)
 
         if res.empty:
             st.error("❌ Aucun résultat trouvé")
@@ -331,11 +351,11 @@ with tab2:
     raw_list = st.text_area("Liste", height=180, placeholder="1 entrée par ligne…")
     if raw_list.strip():
         items = [norm_text(x) for x in raw_list.splitlines() if norm_text(x)]
-        items = list(dict.fromkeys(items))  # unique en gardant l'ordre
+        items = list(dict.fromkeys(items))
 
         all_results = []
         for it in items:
-            r = search_df(df, it, mode)
+            r = search_df_contains(df, it)
             if not r.empty:
                 rr = r.copy()
                 rr.insert(0, "RECHERCHE", it)
@@ -348,7 +368,6 @@ with tab2:
 
             st.success(f"✅ {len(out)} ligne(s) trouvée(s) (pour {len(items)} recherche(s)).")
             cols = ["RECHERCHE", "AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE"]
-
             st.dataframe(out[cols], use_container_width=True, hide_index=True)
 
             csv = out[cols].to_csv(index=False, sep=";").encode("utf-8")
