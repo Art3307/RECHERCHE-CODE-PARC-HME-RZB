@@ -249,12 +249,16 @@ def render_series_side(row: pd.Series):
 
       <div class="series-row">
         <div class="series-label">N° SERIE :</div>
-        <div class="series-value">{s1.replace(" ", "<br>") if s1 else "—"}</div>
+        <div class="series-value" style="margin-top:6px;">
+            {s1 if s1 else "—"}
+        </div>
       </div>
 
       <div class="series-row" style="margin-top:18px;">
         <div class="series-label">N° SERIE GRUE :</div>
-        <div class="series-value">{s2.replace(" ", "<br>") if s2 else "—"}</div>
+        <div class="series-value" style="margin-top:6px;">
+            {s2 if s2 else "—"}
+        </div>
       </div>
 
     </div>
