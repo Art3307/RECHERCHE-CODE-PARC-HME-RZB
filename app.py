@@ -243,19 +243,24 @@ def render_series_side(row: pd.Series):
         """, unsafe_allow_html=True)
         return
 
-    st.markdown(f"""
+    html = f"""
     <div class="series-card">
       <div class="series-title">🔧 Numéros de série</div>
+
       <div class="series-row">
-        <span class="series-label">N° SERIE :</span>
-        <span class="series-value">{s1 if s1 else "—"}</span>
+        <div class="series-label">N° SERIE :</div>
+        <div class="series-value">{s1.replace(" ", "<br>") if s1 else "—"}</div>
       </div>
-      <div class="series-row">
-        <span class="series-label">N° SERIE GRUE :</span>
-        <span class="series-value">{s2 if s2 else "—"}</span>
+
+      <div class="series-row" style="margin-top:18px;">
+        <div class="series-label">N° SERIE GRUE :</div>
+        <div class="series-value">{s2.replace(" ", "<br>") if s2 else "—"}</div>
       </div>
+
     </div>
-    """, unsafe_allow_html=True)
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
 
 def render_big_card(row: pd.Series, user_query: str):
     q = norm_text(user_query)
