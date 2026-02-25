@@ -241,7 +241,6 @@ def render_series_side(row: pd.Series):
 def render_big_card(row: pd.Series, user_query: str):
     q = norm_text(user_query)
 
-    # ✅ Si HME tapé => gros = RZB ; si RZB tapé => gros = HME
     typed_is_hme = bool(re.match(r"^H[0-9A-Z]", q))
     typed_is_rzb = bool(re.match(r"^X[0-9A-Z]", q))
 
@@ -255,7 +254,13 @@ def render_big_card(row: pd.Series, user_query: str):
     immat = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
     com = clean_comment(row.get("COMMENTAIRE", ""))
 
-    com_line = f"<br><b>Commentaire :</b> {com}" if com else ""
+    # Sécurisation : pas d'injection HTML accidentelle
+    com = com.replace("<", "&lt;").replace(">", "&gt;")
+
+    # Si commentaire vide → rien du tout
+    com_block = ""
+    if com:
+        com_block = f"<br><b>Commentaire :</b> {com}"
 
     st.markdown(f"""
     <div class="big-result">
@@ -267,11 +272,10 @@ def render_big_card(row: pd.Series, user_query: str):
             <b>Immat :</b> {immat}<br>
             <b>Agence :</b> {row.get('AGENCE','')}<br>
             <b>Libellé :</b> {row.get('LIBELLE','')}
-            {com_line}
+            {com_block}
         </div>
     </div>
     """, unsafe_allow_html=True)
-
 def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
     cols = ["AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE", "COMMENTAIRE"]
     cols = [c for c in cols if c in res.columns]
@@ -372,3 +376,4 @@ with tab2:
 
             csv = out[cols].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇️ Télécharger (CSV)", data=csv, file_name="multi_resultats_parc.csv", mime="text/csv")
+
