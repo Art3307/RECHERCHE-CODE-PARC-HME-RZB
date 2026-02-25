@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import re
+import json
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Recherche Parc HME ↔ RZB",
@@ -141,6 +143,52 @@ def clean_serial(v) -> str:
     s = norm_text("" if v is None else str(v))
     s = re.sub(r"\s+", " ", s).strip()
     return "" if is_blank(s) else s
+
+
+def render_copy_button(value: str, key: str):
+    """Affiche un bouton de copie (presse-papiers navigateur)."""
+    value = "" if value is None else str(value)
+    button_id = re.sub(r"[^a-zA-Z0-9_-]", "_", key)
+    payload = json.dumps(value)
+
+    html_template = """
+        <div style="display:flex;justify-content:flex-end;">
+          <button id="__BUTTON_ID__" style="
+            background:#141414;
+            color:#f2f2f2;
+            border:1px solid rgba(255,165,0,.55);
+            border-radius:10px;
+            padding:8px 10px;
+            cursor:pointer;
+            width:100%;
+          ">📋 Copier</button>
+        </div>
+        <script>
+          const btn = document.getElementById('__BUTTON_ID__');
+          btn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(__PAYLOAD__);
+              const old = btn.innerText;
+              btn.innerText = '✅ Copié';
+              setTimeout(() => btn.innerText = old, 1200);
+            } catch (e) {
+              btn.innerText = '❌ Refusé';
+              setTimeout(() => btn.innerText = '📋 Copier', 1200);
+            }
+          });
+        </script>
+    """
+    html = html_template.replace("__BUTTON_ID__", button_id).replace("__PAYLOAD__", payload)
+    components.html(html, height=48)
+
+
+def render_copyable_row(label: str, value: str, key: str):
+    left, right = st.columns([4, 1.2], vertical_alignment="bottom")
+    with left:
+        st.caption(label)
+        st.code(value if value else "—", language=None)
+    with right:
+        render_copy_button(value, key)
 
 SERIAL_COLS = ["N° SERIE", "N° SERIE GRUE"]
 
@@ -294,6 +342,20 @@ def render_big_card(row: pd.Series, user_query: str):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("#### 📎 Copier un élément")
+    copy_items = [
+        (f"Code affiché ({big_label})", big_value),
+        ("HME", row.get("PARC_HME", "")),
+        ("RZB", row.get("PARC_RZB", "")),
+        ("Immatriculation", immat),
+        ("Agence", row.get("AGENCE", "")),
+        ("Libellé", row.get("LIBELLE", "")),
+        ("N° SERIE", clean_serial(row.get("N° SERIE", ""))),
+        ("N° SERIE GRUE", clean_serial(row.get("N° SERIE GRUE", ""))),
+    ]
+    for idx, (label, value) in enumerate(copy_items):
+        render_copyable_row(label, "" if value is None else str(value), f"copy_{idx}_{row.get('PARC_HME','')}_{row.get('PARC_RZB','')}")
 
 def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
     cols = ["AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE"]
