@@ -1,11 +1,6 @@
 import streamlit as st
 import pandas as pd
 import re
-import streamlit as st
-import pandas as pd
-import re
-import json
-import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Recherche Parc HME ↔ RZB",
@@ -31,7 +26,92 @@ st.markdown("""
     color: #f2f2f2 !important;
     border: 1px solid rgba(255,165,0,.35) !important;
 }
-@@ -115,54 +117,101 @@ st.markdown("""
+.stTextInput label, .stTextArea label, .stRadio label, .stCaption {
+    color: rgba(255,255,255,.85) !important;
+}
+
+/* Boutons */
+.stButton button {
+    background: #141414 !important;
+    color: #f2f2f2 !important;
+    border: 1px solid rgba(255,165,0,.55) !important;
+}
+.stButton button:hover {
+    border: 1px solid rgba(255,165,0,.9) !important;
+}
+
+/* Encadré général (orange) */
+.big-result {
+    padding: 22px;
+    border-radius: 16px;
+    border: 2px solid rgba(255,165,0,.85);   /* ✅ liseré orange */
+    background: rgba(255,255,255,0.03);
+    margin-top: 18px;
+    text-align: center;
+}
+.big-code {
+    font-size: 56px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    color: #ffa500; /* orange */
+}
+.meta {
+    font-size: 18px;
+    opacity: 0.95;
+    text-align: left;
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.55;
+}
+.small {
+    font-size: 13px;
+    opacity: 0.75;
+    margin-bottom: 8px;
+}
+.badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,165,0,.75);
+    background: rgba(255,165,0,.08);
+    color: #ffd18a;
+}
+
+/* Colonne série à droite (orange) */
+.series-card {
+    padding: 22px;
+    border-radius: 16px;
+    border: 2px solid rgba(255,165,0,.85);   /* ✅ liseré orange */
+    background: rgba(255,255,255,0.03);
+    margin-top: 18px;
+}
+.series-title {
+    font-size: 16px;
+    font-weight: 800;
+    opacity: 0.95;
+    margin-bottom: 10px;
+    color: #ffd18a;
+}
+.series-row {
+    margin: 10px 0;
+    font-size: 15px;
+    line-height: 1.45;
+}
+.series-label {
+    display: inline-block;
+    min-width: 150px;
+    opacity: 0.85;
+    font-weight: 700;
+}
+.series-value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 14px;
+}
+.series-empty {
+    opacity: 0.8;
+    font-style: italic;
+    margin-top: 8px;
 }
 
 /* Dataframe look sombre */
@@ -57,59 +137,10 @@ def is_blank(x: str) -> bool:
     x = norm_text(x)
     return x in ("", "NAN", "NONE", "NULL")
 
-def clean_serial(v) -> str:␍␊
-def clean_serial(v) -> str:␊
+def clean_serial(v) -> str:
     s = norm_text("" if v is None else str(v))
     s = re.sub(r"\s+", " ", s).strip()
     return "" if is_blank(s) else s
-    return "" if is_blank(s) else s
-
-
-def render_copy_button(value: str, key: str):
-    """Affiche un bouton de copie (presse-papiers navigateur)."""
-    value = "" if value is None else str(value)
-    button_id = re.sub(r"[^a-zA-Z0-9_-]", "_", key)
-    payload = json.dumps(value)
-
-    components.html(
-        f"""
-        <div style="display:flex;justify-content:flex-end;">
-          <button id="{button_id}" style="
-            background:#141414;
-            color:#f2f2f2;
-            border:1px solid rgba(255,165,0,.55);
-            border-radius:10px;
-            padding:8px 10px;
-            cursor:pointer;
-            width:100%;
-          ">📋 Copier</button>
-        </div>
-        <script>
-          const btn = document.getElementById('{button_id}');
-          btn.addEventListener('click', async () => {{
-            try {{
-              await navigator.clipboard.writeText({payload});
-              const old = btn.innerText;
-              btn.innerText = '✅ Copié';
-              setTimeout(() => btn.innerText = old, 1200);
-            }} catch (e) {{
-              btn.innerText = '❌ Refusé';
-              setTimeout(() => btn.innerText = '📋 Copier', 1200);
-            }}
-          }});
-        </script>
-        """,
-        height=48,
-    )
-
-
-def render_copyable_row(label: str, value: str, key: str):
-    left, right = st.columns([4, 1.2], vertical_alignment="bottom")
-    with left:
-        st.caption(label)
-        st.code(value if value else "—", language=None)
-    with right:
-        render_copy_button(value, key)
 
 SERIAL_COLS = ["N° SERIE", "N° SERIE GRUE"]
 
@@ -135,7 +166,81 @@ def load_data():
     if "AGENCE" in df.columns:
         df["AGENCE"] = df["AGENCE"].ffill()
 
-@@ -244,78 +293,92 @@ def render_series_side(row: pd.Series):
+    for col in ["PARC_HME", "PARC_RZB", "IMMATRICULATION"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str).map(norm_text)
+
+    if "LIBELLE" in df.columns:
+        df["LIBELLE"] = df["LIBELLE"].astype(str).map(lambda x: (x or "").strip())
+
+    for col in SERIAL_COLS:
+        if col in df.columns:
+            df[col] = df[col].apply(clean_serial)
+
+    if "IMMATRICULATION" in df.columns:
+        df["IMM_NORM"] = df["IMMATRICULATION"].map(norm_immat)
+    else:
+        df["IMM_NORM"] = ""
+
+    if "PARC_HME" in df.columns:
+        df = df[~df["PARC_HME"].map(is_blank)].copy()
+
+    return df
+
+df = load_data()
+
+# ----------------------------
+# Recherche (CONTIENT uniquement)
+# ----------------------------
+def search_df_contains(df_: pd.DataFrame, query: str) -> pd.DataFrame:
+    q_raw = norm_text(query)
+    if not q_raw:
+        return df_.iloc[0:0].copy()
+
+    q_immat = norm_immat(q_raw)
+
+    hme = df_["PARC_HME"]
+    rzb = df_["PARC_RZB"]
+    imm = df_["IMMATRICULATION"] if "IMMATRICULATION" in df_.columns else pd.Series("", index=df_.index)
+    imm_norm = df_["IMM_NORM"]
+    agence = df_["AGENCE"].astype(str).map(norm_text) if "AGENCE" in df_.columns else pd.Series("", index=df_.index)
+    libelle = df_["LIBELLE"].astype(str).map(norm_text) if "LIBELLE" in df_.columns else pd.Series("", index=df_.index)
+
+    tokens = [t for t in re.split(r"\s+", q_raw) if t]
+    mask = pd.Series(True, index=df_.index)
+
+    for tok in tokens:
+        tok = norm_text(tok)
+        tok_immat = norm_immat(tok)
+
+        one_tok_mask = (
+            hme.str.contains(tok, na=False, regex=False) |
+            rzb.str.contains(tok, na=False, regex=False) |
+            imm.str.contains(tok, na=False, regex=False) |
+            agence.str.contains(tok, na=False, regex=False) |
+            libelle.str.contains(tok, na=False, regex=False)
+        )
+        if tok_immat:
+            one_tok_mask = one_tok_mask | imm_norm.str.contains(tok_immat, na=False, regex=False)
+
+        mask = mask & one_tok_mask
+
+    return df_[mask].copy()
+
+# ----------------------------
+# Affichage
+# ----------------------------
+def render_series_side(row: pd.Series):
+    s1 = clean_serial(row.get("N° SERIE", "")) if "N° SERIE" in row.index else ""
+    s2 = clean_serial(row.get("N° SERIE GRUE", "")) if "N° SERIE GRUE" in row.index else ""
+
+    if not (s1 or s2):
+        st.markdown("""
+        <div class="series-card">
+          <div class="series-title">🔧 Numéros de série</div>
+          <div class="series-empty">Pas de numéro de série enregistré</div>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
     html = f"""
@@ -161,8 +266,7 @@ def load_data():
 
     st.markdown(html, unsafe_allow_html=True)
 
-def render_big_card(row: pd.Series, user_query: str):␍␊
-def render_big_card(row: pd.Series, user_query: str):␊
+def render_big_card(row: pd.Series, user_query: str):
     q = norm_text(user_query)
     typed_is_hme = q.startswith("H")
     typed_is_rzb = q.startswith("X")
@@ -177,8 +281,7 @@ def render_big_card(row: pd.Series, user_query: str):␊
 
     immat = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
 
-    st.markdown(f"""␍␊
-    st.markdown(f"""␊
+    st.markdown(f"""
     <div class="big-result">
         <div class="small"><span class="badge">{big_label}</span></div>
         <div class="big-code">{big_value}</div>
@@ -191,22 +294,6 @@ def render_big_card(row: pd.Series, user_query: str):␊
         </div>
     </div>
     """, unsafe_allow_html=True)
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("#### 📎 Copier un élément")
-    copy_items = [
-        (f"Code affiché ({big_label})", big_value),
-        ("HME", row.get("PARC_HME", "")),
-        ("RZB", row.get("PARC_RZB", "")),
-        ("Immatriculation", immat),
-        ("Agence", row.get("AGENCE", "")),
-        ("Libellé", row.get("LIBELLE", "")),
-        ("N° SERIE", clean_serial(row.get("N° SERIE", ""))),
-        ("N° SERIE GRUE", clean_serial(row.get("N° SERIE GRUE", ""))),
-    ]
-    for idx, (label, value) in enumerate(copy_items):
-        render_copyable_row(label, "" if value is None else str(value), f"copy_{idx}_{row.get('PARC_HME','')}_{row.get('PARC_RZB','')}")
 
 def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
     cols = ["AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE"]
@@ -232,7 +319,42 @@ def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
             if rows:
                 selected_pos = rows[0]
     except Exception:
-@@ -358,26 +421,26 @@ with tab2:
+        selected_pos = None
+
+    return selected_pos
+
+# ----------------------------
+# UI
+# ----------------------------
+tab1, tab2 = st.tabs(["Recherche simple", "Multi-recherche (liste)"])
+
+with tab1:
+    query = st.text_input(
+        "Tape un code HME, RZB, une immatriculation, ou des mots-clés (ex: pelle bassin)",
+        placeholder="Ex: H01100M / X001L / AB-123-CD / pelle bassin"
+    )
+
+    if query:
+        res = search_df_contains(df, query)
+
+        if res.empty:
+            st.error("❌ Aucun résultat trouvé")
+        else:
+            if len(res) == 1:
+                chosen = res.iloc[0]
+            else:
+                st.info(f"✅ {len(res)} résultats trouvés.")
+                selected_pos = results_table_with_selection(res, "resultats_parc.csv", key="table_simple")
+                chosen = res.iloc[selected_pos] if selected_pos is not None else res.iloc[0]
+
+            left, right = st.columns([2.2, 1.3], gap="large")
+            with left:
+                render_big_card(chosen, query)
+            with right:
+                render_series_side(chosen)
+
+with tab2:
+    st.write("Colle une liste (1 entrée par ligne). Tu peux aussi mettre des mots-clés :")
     st.code("H01100M\nX001L\nAB-123-CD\npelle bassin", language="text")
 
     raw_list = st.text_area("Liste", height=180, placeholder="1 entrée par ligne…")
@@ -258,5 +380,4 @@ def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
             st.dataframe(out[cols], use_container_width=True, hide_index=True)
 
             csv = out[cols].to_csv(index=False, sep=";").encode("utf-8")
-            st.download_button("⬇️ Télécharger (CSV)", data=csv, file_name="multi_resultats_parc.csv", mime="text/csv")
             st.download_button("⬇️ Télécharger (CSV)", data=csv, file_name="multi_resultats_parc.csv", mime="text/csv")
