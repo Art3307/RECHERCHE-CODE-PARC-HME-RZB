@@ -1,8 +1,3 @@
-diff --git a/app.py b/app.py
-index bd2272cb0887a40c8270e47b1d7f62e00152d52a..17496cf7b27d55261e049fbf79abc0293d5ddc03 100644
---- a/app.py
-+++ b/app.py
-@@ -1,28 +1,30 @@
 -import streamlit as st
 -import pandas as pd
 -import re
@@ -266,3 +261,4 @@ index bd2272cb0887a40c8270e47b1d7f62e00152d52a..17496cf7b27d55261e049fbf79abc029
 -            st.download_button("⬇️ Télécharger (CSV)", data=csv, file_name="multi_resultats_parc.csv", mime="text/csv")
 \ No newline at end of file
 +            st.download_button("⬇️ Télécharger (CSV)", data=csv, file_name="multi_resultats_parc.csv", mime="text/csv")
+
