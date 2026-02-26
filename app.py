@@ -307,9 +307,7 @@ Aucun résultat pour « {query} »
 
 # ══════════════════════════════════════════════════════════════
 with tab2:
-    st.markdown('
-Une entrée par ligne (code HME, RZB, immat ou mots-clés)
-', unsafe_allow_html=True)
+    st.markdown('Une entrée par ligne (code HME, RZB, immat ou mots-clés)', unsafe_allow_html=True)
     raw = st.text_area(" ", height=180, placeholder="H01100M\nX001L\nAB-123-CD\npelle bassin", label_visibility="collapsed", key="multi_input")
     if raw.strip():
         items = list(dict.fromkeys([x.strip() for x in raw.splitlines() if x.strip()]))
@@ -321,9 +319,7 @@ Une entrée par ligne (code HME, RZB, immat ou mots-clés)
                 rr.insert(0, "RECHERCHE", it)
                 all_res.append(rr)
         if not all_res:
-            st.markdown('
-Aucun résultat pour la liste fournie
-', unsafe_allow_html=True)
+            st.markdown('Aucun résultat pour la liste fournie', unsafe_allow_html=True)
         else:
             out = pd.concat(all_res, ignore_index=True)
             not_found = [it for it in items if it not in out["RECHERCHE"].values]
@@ -353,5 +349,6 @@ Non trouvées
             st.dataframe(out[cols_show], use_container_width=True, hide_index=True)
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇ Exporter CSV", data=csv, file_name="multi_resultats.csv", mime="text/csv")
+
 
 
