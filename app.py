@@ -540,20 +540,18 @@ tab1, tab2 = st.tabs(["RECHERCHE", "MULTI-RECHERCHE"])
 with tab1:
     if "last_query" not in st.session_state:
         st.session_state["last_query"] = ""
-    if "input_val" not in st.session_state:
-        st.session_state["input_val"] = ""
 
-    col_inp, col_btn = st.columns([6, 1])
-    with col_inp:
-        q_input = st.text_input(
-            " ",
-            value=st.session_state["input_val"],
-            placeholder="Ex : H01100M · X001L · AB-123-CD · pelle bassin",
-            label_visibility="collapsed",
-            key="q_simple"
-        )
-    with col_btn:
-        go = st.button("Chercher", use_container_width=True)
+    with st.form("search_form", clear_on_submit=True):
+        col_inp, col_btn = st.columns([6, 1])
+        with col_inp:
+            q_input = st.text_input(
+                " ",
+                placeholder="Ex : H01100M · X001L · AB-123-CD · pelle bassin",
+                label_visibility="collapsed",
+                key="q_simple"
+            )
+        with col_btn:
+            go = st.form_submit_button("Chercher", use_container_width=True)
 
     st.markdown("""
     <div class="hint-row">
@@ -566,8 +564,6 @@ with tab1:
 
     if go and q_input.strip():
         st.session_state["last_query"] = q_input.strip()
-        st.session_state["input_val"] = ""
-        st.rerun()
 
     query = st.session_state["last_query"]
 
