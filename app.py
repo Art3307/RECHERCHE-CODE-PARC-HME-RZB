@@ -418,15 +418,25 @@ def search(df_, query):
 # ─── RENDER HELPERS ────────────────────────────────────────────────────────────
 def render_result(row, query):
     q = norm_text(query)
-    typed_hme = bool(re.match(r"^H[0-9A-Z]", q))
-    typed_rzb  = bool(re.match(r"^X[0-9A-Z]", q)) or bool(re.match(r"^P[0-9A-Z]", q))
+    q_immat = norm_immat(q)
 
-    if typed_hme:
+    hme = norm_text(row.get("PARC_HME", ""))
+    rzb = norm_text(row.get("PARC_RZB", ""))
+
+    # La query matche-t-elle le champ HME ?
+    matched_hme = q in hme or (q_immat and q_immat in norm_immat(hme))
+    # La query matche-t-elle le champ RZB ?
+    matched_rzb = q in rzb or (q_immat and q_immat in norm_immat(rzb))
+
+    if matched_hme:
+        # On a cherché par HME → on affiche le RZB en gros
         big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
-        other_label, other_val = "HME", row.get("PARC_HME", "")
-    else:
+    elif matched_rzb:
+        # On a cherché par RZB → on affiche le HME en gros
         big_code, big_tag = row.get("PARC_HME", ""), "→ N° PARC HME"
-        other_label, other_val = "RZB", row.get("PARC_RZB", "")
+    else:
+        # Recherche par mot-clé (libellé, agence…) → on affiche le RZB par défaut
+        big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
 
     immat = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
     com = clean_comment(row.get("COMMENTAIRE", "")).replace("<","&lt;").replace(">","&gt;")
