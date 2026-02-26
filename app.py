@@ -495,7 +495,7 @@ def render_result(row, query):
 
     if com:
         html_parts.append(f'''
-<div class="result-comment">○ {com}</div>
+<div class="result-comment">💬 {com}</div>
 ''')
 
     # Assemblage final
@@ -566,7 +566,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ─── TABS ──────────────────────────────────────────────────────────────────────
-tab1, tab2 = st.tabs(["RECHERCHE", "MULTI-RECHERCHE"])
+tab1, tab2 = st.tabs(["🔎 RECHERCHE", "MULTI-RECHERCHE"])
 
 # ══════════════════════════════════════════════════════════════
 with tab1:
