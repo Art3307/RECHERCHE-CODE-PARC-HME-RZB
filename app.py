@@ -417,96 +417,90 @@ def search(df_, query):
 
 # ─── RENDER HELPERS ────────────────────────────────────────────────────────────
 def render_result(row, query):
+    # 1. Normalisation des données
     q = norm_text(query)
     q_immat = norm_immat(q)
-
     hme = norm_text(row.get("PARC_HME", ""))
     rzb = norm_text(row.get("PARC_RZB", ""))
 
-    # La query matche-t-elle le champ HME ?
+    # 2. Détermination du gros code et du tag (IMPORTANT : AVANT html_parts !)
     matched_hme = q in hme or (q_immat and q_immat in norm_immat(hme))
-    # La query matche-t-elle le champ RZB ?
     matched_rzb = q in rzb or (q_immat and q_immat in norm_immat(rzb))
 
     if matched_hme:
-        # On a cherché par HME → on affiche le RZB en gros
-        big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
+        big_code = row.get("PARC_RZB", "")
+        big_tag  = "→ N° PARC RZB"
     elif matched_rzb:
-        # On a cherché par RZB → on affiche le HME en gros
-        big_code, big_tag = row.get("PARC_HME", ""), "→ N° PARC HME"
+        big_code = row.get("PARC_HME", "")
+        big_tag  = "→ N° PARC HME"
     else:
-        # Recherche par mot-clé (libellé, agence…) → on affiche le RZB par défaut
-        big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
+        big_code = row.get("PARC_RZB", "")
+        big_tag  = "→ N° PARC RZB"
 
-    immat = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
-    com = clean_comment(row.get("COMMENTAIRE", "")).replace("<","&lt;").replace(">","&gt;")
-    libelle = (row.get("LIBELLE","") or "").replace("<","&lt;").replace(">","&gt;")
-    agence = (row.get("AGENCE","") or "").replace("<","&lt;").replace(">","&gt;")
-    parc_hme = norm_text(row.get("PARC_HME",""))
-    parc_rzb = norm_text(row.get("PARC_RZB",""))
+    # 3. Récupération des autres champs (avec gestion vide)
+    immat   = row.get("IMMATRICULATION", "").strip() or ""
+    com     = clean_comment(row.get("COMMENTAIRE", "")).strip()
+    libelle = (row.get("LIBELLE", "") or "").strip()
+    agence  = (row.get("AGENCE", "") or "").strip()
+    parc_hme = row.get("PARC_HME", "").strip()
+    parc_rzb = row.get("PARC_RZB", "").strip()
 
-# ... (le reste de la logique pour big_tag, big_code, etc.)
+    # 4. Construction HTML (maintenant big_tag et big_code existent !)
+    html_parts = []
 
-html_parts = []
+    # Toujours afficher le tag et le gros code
+    html_parts.append(f'<div class="result-tag">{big_tag}</div>')
+    html_parts.append(f'<div class="result-main-code">{big_code}</div>')
 
-# Tag + gros code (toujours affichés)
-html_parts.append(f'<div class="result-tag">{big_tag}</div>')
-html_parts.append(f'<div class="result-main-code">{big_code}</div>')
-
-# HME → seulement si non vide
-if parc_hme:
-    html_parts.append(f'''
+    # Afficher seulement les lignes qui ont du contenu
+    if parc_hme:
+        html_parts.append(f'''
 <div class="result-row">
     <span class="result-label">HME</span>
     <span class="result-value mono">{parc_hme}</span>
 </div>
 ''')
 
-# RZB → idem
-if parc_rzb:
-    html_parts.append(f'''
+    if parc_rzb:
+        html_parts.append(f'''
 <div class="result-row">
     <span class="result-label">RZB</span>
     <span class="result-value mono">{parc_rzb}</span>
 </div>
 ''')
 
-# Immatriculation
-if immat:
-    html_parts.append(f'''
+    if immat:
+        html_parts.append(f'''
 <div class="result-row">
     <span class="result-label">Immatriculation</span>
     <span class="result-value">{immat}</span>
 </div>
 ''')
 
-# Agence
-if agence:
-    html_parts.append(f'''
+    if agence:
+        html_parts.append(f'''
 <div class="result-row">
     <span class="result-label">Agence</span>
     <span class="result-value">{agence}</span>
 </div>
 ''')
 
-# Libellé
-if libelle:
-    html_parts.append(f'''
+    if libelle:
+        html_parts.append(f'''
 <div class="result-row">
     <span class="result-label">Libellé</span>
     <span class="result-value">{libelle}</span>
 </div>
 ''')
 
-# Commentaire (spécial)
-if com:
-    html_parts.append(f'''
+    if com:
+        html_parts.append(f'''
 <div class="result-comment">○ {com}</div>
 ''')
 
-# Assemblage final
-html = ''.join(html_parts)
-st.markdown(f'<div class="result-card">{html}</div>', unsafe_allow_html=True)
+    # Assemblage final
+    html = ''.join(html_parts)
+    st.markdown(f'<div class="result-card">{html}</div>', unsafe_allow_html=True)
 
 def render_serial(row):
     s1 = clean_serial(row.get("N° SERIE", ""))
