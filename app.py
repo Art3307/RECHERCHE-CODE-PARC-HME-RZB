@@ -3,124 +3,352 @@ import pandas as pd
 import re
 
 st.set_page_config(
-    page_title="Recherche Parc HME ↔ RZB",
-    layout="centered",
+    page_title="Parc HME ↔ RZB",
+    layout="wide",
     initial_sidebar_state="collapsed"
 )
-st.title("🔎 Recherche Parc : HME ↔ RZB")
 
-# ----------------------------
-# STYLE (fond noir + liseré orange)
-# ----------------------------
+# ─── STYLES ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-.stApp { background:#0b0b0b; color:#f2f2f2; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
 
-.stTextInput input, .stTextArea textarea {
-    background:#121212 !important;
-    color:#f2f2f2 !important;
-    border:1px solid rgba(255,165,0,.35) !important;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
-.stButton button {
-    background:#141414 !important;
-    color:#f2f2f2 !important;
-    border:1px solid rgba(255,165,0,.55) !important;
-}
-.stButton button:hover { border:1px solid rgba(255,165,0,.9) !important; }
-
-.big-result{
-    padding:22px; border-radius:16px;
-    border:2px solid rgba(255,165,0,.85);
-    background:rgba(255,255,255,0.03);
-    margin-top:18px; text-align:center;
-}
-.big-code{
-    font-size:56px; font-weight:900; margin-bottom:10px; letter-spacing:1px;
-    color:#ffa500;
-}
-.meta{
-    font-size:18px; opacity:0.95; text-align:left; max-width:650px;
-    margin:0 auto; line-height:1.55;
-}
-.small{ font-size:13px; opacity:0.75; margin-bottom:8px; }
-.badge{
-    display:inline-block; padding:6px 10px; border-radius:999px;
-    border:1px solid rgba(255,165,0,.75);
-    background:rgba(255,165,0,.08);
-    color:#ffd18a;
+.stApp {
+    background: #0d0d0d;
+    color: #e8e8e0;
+    font-family: 'Syne', sans-serif;
 }
 
-/* Carte séries à droite */
-.series-card{
-    padding:22px; border-radius:16px;
-    border:2px solid rgba(255,165,0,.85);
-    background:rgba(255,255,255,0.03);
-    margin-top:18px;
+/* Supprimer les marges superflues */
+.block-container { padding-top: 2rem !important; padding-bottom: 3rem !important; }
+
+/* Header */
+.app-header {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid #2a2a2a;
+    padding-bottom: 1.2rem;
 }
-.series-title{
-    font-size:16px; font-weight:800; margin-bottom:10px; color:#ffd18a;
+.app-title {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #e8e8e0;
 }
-.series-row{ margin:12px 0; font-size:15px; line-height:1.45; }
-.series-label{ display:block; font-weight:800; opacity:0.9; margin-bottom:6px; }
-.series-value{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size:14px;
-    white-space: pre-wrap;       /* garde les retours à la ligne si tu en mets dans Excel */
-    word-break: break-word;
+.app-subtitle {
+    font-size: 0.9rem;
+    color: #555;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.5px;
 }
-.series-empty{ opacity:0.8; font-style:italic; margin-top:8px; }
+.dot-orange { color: #e8601a; }
+
+/* Input */
+.stTextInput > div > div > input {
+    background: #141414 !important;
+    border: 1px solid #252525 !important;
+    border-radius: 6px !important;
+    color: #e8e8e0 !important;
+    font-family: 'DM Mono', monospace !important;
+    font-size: 1rem !important;
+    padding: 0.7rem 1rem !important;
+    transition: border-color 0.2s;
+}
+.stTextInput > div > div > input:focus {
+    border-color: #e8601a !important;
+    box-shadow: 0 0 0 2px rgba(232,96,26,0.1) !important;
+}
+
+/* Bouton */
+.stButton > button {
+    background: #e8601a !important;
+    color: #0d0d0d !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    padding: 0.65rem 1.8rem !important;
+    letter-spacing: 0.5px !important;
+    transition: opacity 0.15s !important;
+    cursor: pointer !important;
+}
+.stButton > button:hover { opacity: 0.85 !important; }
+
+/* Carte résultat principal */
+.result-card {
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 12px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+.result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #e8601a, #f7b500);
+}
+.result-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #e8601a;
+    background: rgba(232,96,26,0.08);
+    border: 1px solid rgba(232,96,26,0.3);
+    padding: 3px 10px;
+    border-radius: 99px;
+    margin-bottom: 14px;
+}
+.result-main-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 3.2rem;
+    font-weight: 500;
+    color: #f7b500;
+    letter-spacing: 1px;
+    line-height: 1;
+    margin-bottom: 1.5rem;
+}
+.result-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    align-items: baseline;
+}
+.result-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #444;
+    min-width: 120px;
+    flex-shrink: 0;
+}
+.result-value {
+    font-size: 0.95rem;
+    color: #c8c8c0;
+}
+.result-value.mono {
+    font-family: 'DM Mono', monospace;
+    color: #e8e8e0;
+}
+.result-comment {
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+    background: rgba(255,255,255,0.025);
+    border-left: 2px solid rgba(232,96,26,0.5);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.9rem;
+    color: #999;
+    font-style: italic;
+}
+
+/* Carte série */
+.serie-card {
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 12px;
+    padding: 1.6rem;
+    height: 100%;
+}
+.serie-card-title {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #444;
+    margin-bottom: 1.2rem;
+    font-family: 'DM Mono', monospace;
+}
+.serie-block { margin-bottom: 1.2rem; }
+.serie-block-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #444;
+    margin-bottom: 5px;
+}
+.serie-block-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.92rem;
+    color: #e8e8e0;
+    word-break: break-all;
+}
+.serie-empty {
+    color: #333;
+    font-size: 0.88rem;
+    font-style: italic;
+}
+.serie-divider {
+    height: 1px;
+    background: #1e1e1e;
+    margin: 1rem 0;
+}
+
+/* Stats bar */
+.stats-bar {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.2rem;
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.stat-item { text-align: center; }
+.stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: #f7b500;
+}
+.stat-label {
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #444;
+    margin-top: 2px;
+}
+.stat-sep { color: #222; font-size: 1.5rem; }
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    background: transparent !important;
+    border-bottom: 1px solid #1e1e1e !important;
+    gap: 0 !important;
+}
+.stTabs [data-baseweb="tab"] {
+    background: transparent !important;
+    color: #555 !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    letter-spacing: 1px !important;
+    padding: 0.7rem 1.5rem !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid transparent !important;
+    transition: all 0.15s !important;
+}
+.stTabs [aria-selected="true"] {
+    color: #e8601a !important;
+    border-bottom: 2px solid #e8601a !important;
+}
 
 /* Tableau */
-[data-testid="stDataFrame"]{
-    border:1px solid rgba(255,165,0,.35);
-    border-radius:12px;
-    overflow:hidden;
+[data-testid="stDataFrame"] {
+    border: 1px solid #1e1e1e !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+}
+
+/* Hint chips */
+.hint-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+}
+.hint-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: #555;
+    background: #141414;
+    border: 1px solid #252525;
+    padding: 3px 10px;
+    border-radius: 99px;
+}
+
+/* Error / success */
+.stAlert { border-radius: 8px !important; }
+
+/* Section label */
+.section-label {
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #444;
+    margin-bottom: 0.8rem;
+    font-family: 'DM Mono', monospace;
+}
+
+/* No result */
+.no-result {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #333;
+    font-size: 1.2rem;
+}
+.no-result span { color: #e8601a; }
+
+/* Download button */
+.stDownloadButton > button {
+    background: transparent !important;
+    color: #e8601a !important;
+    border: 1px solid rgba(232,96,26,0.4) !important;
+    border-radius: 6px !important;
+    font-family: 'DM Mono', monospace !important;
+    font-size: 0.8rem !important;
+    padding: 0.5rem 1.2rem !important;
+}
+.stDownloadButton > button:hover {
+    border-color: #e8601a !important;
+    background: rgba(232,96,26,0.05) !important;
+}
+
+/* Text area */
+.stTextArea textarea {
+    background: #141414 !important;
+    border: 1px solid #252525 !important;
+    border-radius: 6px !important;
+    color: #e8e8e0 !important;
+    font-family: 'DM Mono', monospace !important;
+    font-size: 0.9rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------
-# Helpers
-# ----------------------------
-def norm_text(s: str) -> str:
+# ─── HELPERS ───────────────────────────────────────────────────────────────────
+def norm_text(s):
     return (s or "").strip().upper()
 
-def norm_immat(s: str) -> str:
+def norm_immat(s):
     return re.sub(r"[^A-Z0-9]", "", norm_text(s))
 
-def is_blank(x: str) -> bool:
-    return norm_text(x) in ("", "NAN", "NONE", "NULL")
+def is_blank(x):
+    return norm_text(str(x)) in ("", "NAN", "NONE", "NULL", "(VIDE)")
 
-def clean_serial(v) -> str:
+def clean_serial(v):
     s = ("" if v is None else str(v)).strip()
     s = re.sub(r"\s+", " ", s).strip()
     return "" if is_blank(s) else s
 
-def clean_comment(v) -> str:
+def clean_comment(v):
     s = ("" if v is None else str(v)).strip()
     return "" if is_blank(s) else s
 
 SERIAL_COLS = ["N° SERIE", "N° SERIE GRUE"]
 
-# ----------------------------
-# Chargement data
-# ----------------------------
+# ─── DATA ──────────────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
     df = pd.read_excel("PARC RZB (version 1).xlsx", sheet_name="Feuil2", header=2)
     df.columns = [str(c).strip() for c in df.columns]
 
-    # Renommage tolérant
     rename_map = {
-        "AGENCE": "AGENCE",
         "N° DE PARC HME": "PARC_HME",
         "N° PARC RZB": "PARC_RZB",
         "Libellé": "LIBELLE",
         "LIBELLE": "LIBELLE",
-        "IMMATRICULATION": "IMMATRICULATION",
-        "N° SERIE": "N° SERIE",
-        "N° SERIE GRUE": "N° SERIE GRUE",
         "COMMENTAIRE": "COMMENTAIRE",
         "Commentaire": "COMMENTAIRE",
         "Commentaires": "COMMENTAIRE",
@@ -128,7 +356,6 @@ def load_data():
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
 
-    # Normalisation
     if "AGENCE" in df.columns:
         df["AGENCE"] = df["AGENCE"].ffill()
     else:
@@ -141,7 +368,7 @@ def load_data():
             df[col] = ""
 
     if "LIBELLE" in df.columns:
-        df["LIBELLE"] = df["LIBELLE"].astype(str).map(lambda x: (x or "").strip())
+        df["LIBELLE"] = df["LIBELLE"].astype(str).str.strip()
     else:
         df["LIBELLE"] = ""
 
@@ -157,130 +384,111 @@ def load_data():
             df[col] = ""
 
     df["IMM_NORM"] = df["IMMATRICULATION"].map(norm_immat) if "IMMATRICULATION" in df.columns else ""
-
-    # Filtrer lignes vides (parc HME vide)
     df = df[~df["PARC_HME"].map(is_blank)].copy()
-
     return df
 
 df = load_data()
 
-# ----------------------------
-# Recherche (CONTIENT uniquement)
-# ----------------------------
-def search_df_contains(df_: pd.DataFrame, query: str) -> pd.DataFrame:
+# ─── SEARCH ────────────────────────────────────────────────────────────────────
+def search(df_, query):
     q_raw = norm_text(query)
     if not q_raw:
         return df_.iloc[0:0].copy()
 
     q_immat = norm_immat(q_raw)
-
-    hme = df_["PARC_HME"]
-    rzb = df_["PARC_RZB"]
-    imm = df_["IMMATRICULATION"]
-    imm_norm = df_["IMM_NORM"]
-    agence = df_["AGENCE"].astype(str).map(norm_text)
-    libelle = df_["LIBELLE"].astype(str).map(norm_text)
-    commentaire = df_["COMMENTAIRE"].astype(str).map(norm_text)
-
     tokens = [t for t in re.split(r"\s+", q_raw) if t]
     mask = pd.Series(True, index=df_.index)
 
     for tok in tokens:
-        tok = norm_text(tok)
-        tok_immat = norm_immat(tok)
-
-        one_tok_mask = (
-            hme.str.contains(tok, na=False, regex=False) |
-            rzb.str.contains(tok, na=False, regex=False) |
-            imm.str.contains(tok, na=False, regex=False) |
-            agence.str.contains(tok, na=False, regex=False) |
-            libelle.str.contains(tok, na=False, regex=False) |
-            commentaire.str.contains(tok, na=False, regex=False)
+        tok_i = norm_immat(tok)
+        one = (
+            df_["PARC_HME"].str.contains(tok, na=False, regex=False) |
+            df_["PARC_RZB"].str.contains(tok, na=False, regex=False) |
+            df_["IMMATRICULATION"].str.contains(tok, na=False, regex=False) |
+            df_["AGENCE"].astype(str).str.upper().str.contains(tok, na=False, regex=False) |
+            df_["LIBELLE"].astype(str).str.upper().str.contains(tok, na=False, regex=False) |
+            df_["COMMENTAIRE"].astype(str).str.upper().str.contains(tok, na=False, regex=False)
         )
-
-        if tok_immat:
-            one_tok_mask = one_tok_mask | imm_norm.str.contains(tok_immat, na=False, regex=False)
-
-        mask = mask & one_tok_mask
+        if tok_i:
+            one = one | df_["IMM_NORM"].str.contains(tok_i, na=False, regex=False)
+        mask = mask & one
 
     return df_[mask].copy()
 
-# ----------------------------
-# Affichage
-# ----------------------------
-def render_series_side(row: pd.Series):
+# ─── RENDER HELPERS ────────────────────────────────────────────────────────────
+def render_result(row, query):
+    q = norm_text(query)
+    typed_hme = bool(re.match(r"^H[0-9A-Z]", q))
+    typed_rzb  = bool(re.match(r"^X[0-9A-Z]", q)) or bool(re.match(r"^P[0-9A-Z]", q))
+
+    if typed_hme:
+        big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
+        other_label, other_val = "HME", row.get("PARC_HME", "")
+    else:
+        big_code, big_tag = row.get("PARC_HME", ""), "→ N° PARC HME"
+        other_label, other_val = "RZB", row.get("PARC_RZB", "")
+
+    immat = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
+    com = clean_comment(row.get("COMMENTAIRE", "")).replace("<","&lt;").replace(">","&gt;")
+    libelle = (row.get("LIBELLE","") or "").replace("<","&lt;").replace(">","&gt;")
+    agence = (row.get("AGENCE","") or "").replace("<","&lt;").replace(">","&gt;")
+
+    com_html = f'<div class="result-comment">💬 {com}</div>' if com else ""
+
+    st.markdown(f"""
+    <div class="result-card">
+        <div class="result-tag">{big_tag}</div>
+        <div class="result-main-code">{big_code}</div>
+        <div class="result-row">
+            <span class="result-label">HME</span>
+            <span class="result-value mono">{row.get('PARC_HME','')}</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">RZB</span>
+            <span class="result-value mono">{row.get('PARC_RZB','')}</span>
+        </div>
+        {"<div class='result-row'><span class='result-label'>Immatriculation</span><span class='result-value mono'>" + immat + "</span></div>" if immat else ""}
+        <div class="result-row">
+            <span class="result-label">Agence</span>
+            <span class="result-value">{agence}</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">Libellé</span>
+            <span class="result-value">{libelle}</span>
+        </div>
+        {com_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_serial(row):
     s1 = clean_serial(row.get("N° SERIE", ""))
     s2 = clean_serial(row.get("N° SERIE GRUE", ""))
 
-    if not (s1 or s2):
+    if not s1 and not s2:
         st.markdown("""
-        <div class="series-card">
-          <div class="series-title">🔧 Numéros de série</div>
-          <div class="series-empty">Pas de numéro de série enregistré</div>
+        <div class="serie-card">
+            <div class="serie-card-title">Numéros de série</div>
+            <div class="serie-empty">Aucun numéro enregistré</div>
         </div>
         """, unsafe_allow_html=True)
         return
 
+    s1_html = f'<div class="serie-block"><div class="serie-block-label">N° Série</div><div class="serie-block-value">{s1}</div></div>' if s1 else ""
+    s2_html = f'<div class="serie-block"><div class="serie-block-label">N° Série Grue</div><div class="serie-block-value">{s2}</div></div>' if s2 else ""
+    div = '<div class="serie-divider"></div>' if s1 and s2 else ""
+
     st.markdown(f"""
-    <div class="series-card">
-      <div class="series-title">🔧 Numéros de série</div>
-
-      <div class="series-row">
-        <div class="series-label">N° SERIE :</div>
-        <div class="series-value">{s1 if s1 else "—"}</div>
-      </div>
-
-      <div class="series-row" style="margin-top:18px;">
-        <div class="series-label">N° SERIE GRUE :</div>
-        <div class="series-value">{s2 if s2 else "—"}</div>
-      </div>
+    <div class="serie-card">
+        <div class="serie-card-title">Numéros de série</div>
+        {s1_html}{div}{s2_html}
     </div>
     """, unsafe_allow_html=True)
 
-def render_big_card(row: pd.Series, user_query: str):
-    q = norm_text(user_query)
-
-    typed_is_hme = bool(re.match(r"^H[0-9A-Z]", q))
-    typed_is_rzb = bool(re.match(r"^X[0-9A-Z]", q))
-
-    if typed_is_hme:
-        big_value, big_label = row.get("PARC_RZB", ""), "RZB"
-    elif typed_is_rzb:
-        big_value, big_label = row.get("PARC_HME", ""), "HME"
-    else:
-        big_value, big_label = row.get("PARC_RZB", ""), "RZB"
-
-    immat = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
-    com = clean_comment(row.get("COMMENTAIRE", ""))
-
-    # Sécurisation : pas d'injection HTML accidentelle
-    com = com.replace("<", "&lt;").replace(">", "&gt;")
-
-    # Si commentaire vide → rien du tout
-    com_block = ""
-    if com:
-        com_block = f"<br><b>Commentaire :</b> {com}"
-
-    st.markdown(f"""
-    <div class="big-result">
-        <div class="small"><span class="badge">{big_label}</span></div>
-        <div class="big-code">{big_value}</div>
-        <div class="meta">
-            <b>HME :</b> {row.get('PARC_HME','')}<br>
-            <b>RZB :</b> {row.get('PARC_RZB','')}<br>
-            <b>Immat :</b> {immat}<br>
-            <b>Agence :</b> {row.get('AGENCE','')}<br>
-            <b>Libellé :</b> {row.get('LIBELLE','')}
-            {com_block}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
-    cols = ["AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE", "COMMENTAIRE"]
+def show_table_with_select(res, filename, key):
+    cols = ["AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
     cols = [c for c in cols if c in res.columns]
 
-    st.caption("Clique une ligne pour afficher le résultat 👇")
+    st.markdown('<div class="section-label">Cliquez une ligne pour la détailler</div>', unsafe_allow_html=True)
 
     event = st.dataframe(
         res[cols],
@@ -292,90 +500,148 @@ def results_table_with_selection(res: pd.DataFrame, filename: str, key: str):
     )
 
     csv = res[cols].to_csv(index=False, sep=";").encode("utf-8")
-    st.download_button("⬇️ Télécharger les résultats (CSV)", data=csv, file_name=filename, mime="text/csv")
+    st.download_button("⬇ Exporter CSV", data=csv, file_name=filename, mime="text/csv", key=f"dl_{key}")
 
     selected_pos = None
     try:
-        if event is not None and hasattr(event, "selection") and event.selection is not None:
+        if event and hasattr(event, "selection") and event.selection:
             rows = getattr(event.selection, "rows", None)
             if rows:
                 selected_pos = rows[0]
     except Exception:
-        selected_pos = None
-
+        pass
     return selected_pos
 
-# ----------------------------
-# UI
-# ----------------------------
-tab1, tab2 = st.tabs(["Recherche simple", "Multi-recherche (liste)"])
+# ─── HEADER ────────────────────────────────────────────────────────────────────
+n_agences = df["AGENCE"].nunique()
+n_engins  = len(df)
 
+st.markdown(f"""
+<div class="app-header">
+    <div class="app-title">Parc <span class="dot-orange">HME</span> ↔ RZB</div>
+    <div class="app-subtitle">{n_engins} engins · {n_agences} agences</div>
+</div>
+""", unsafe_allow_html=True)
+
+# ─── TABS ──────────────────────────────────────────────────────────────────────
+tab1, tab2 = st.tabs(["RECHERCHE", "MULTI-RECHERCHE"])
+
+# ══════════════════════════════════════════════════════════════
 with tab1:
-    # On garde la dernière recherche affichée même si le champ se vide
     if "last_query" not in st.session_state:
         st.session_state["last_query"] = ""
 
-    with st.form("search_form", clear_on_submit=True):
-        query_input = st.text_input(
-            "Tape un code HME (H0…), RZB (X…), une immatriculation, ou des mots-clés (ex: pelle bassin)",
-            placeholder="Ex: H01100M / X001L / AB-123-CD / pelle bassin",
-            key="query_input"
+    col_inp, col_btn = st.columns([6, 1])
+    with col_inp:
+        q_input = st.text_input(
+            " ",
+            placeholder="Ex : H01100M · X001L · AB-123-CD · pelle bassin",
+            label_visibility="collapsed",
+            key="q_simple"
         )
-        submitted = st.form_submit_button("🔎 Rechercher")
+    with col_btn:
+        go = st.button("Chercher", use_container_width=True)
 
-    if submitted:
-        st.session_state["last_query"] = query_input.strip()
+    st.markdown("""
+    <div class="hint-row">
+        <span class="hint-chip">HME → commence par H</span>
+        <span class="hint-chip">RZB → commence par X ou P</span>
+        <span class="hint-chip">Immatriculation</span>
+        <span class="hint-chip">Mots-clés libres</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if go or (q_input and q_input != st.session_state.get("_prev_q", "")):
+        st.session_state["last_query"] = q_input.strip()
+        st.session_state["_prev_q"] = q_input
 
     query = st.session_state["last_query"]
 
     if query:
-        res = search_df_contains(df, query)
-
+        res = search(df, query)
         if res.empty:
-            st.error("❌ Aucun résultat trouvé")
+            st.markdown(f"""
+            <div class="no-result">
+                Aucun résultat pour <span>«&nbsp;{query}&nbsp;»</span>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             if len(res) == 1:
                 chosen = res.iloc[0]
+                c1, c2 = st.columns([2.5, 1.2], gap="large")
+                with c1:
+                    render_result(chosen, query)
+                with c2:
+                    render_serial(chosen)
             else:
-                st.info(f"✅ {len(res)} résultats trouvés.")
-                selected_pos = results_table_with_selection(res, "resultats_parc.csv", key="table_simple")
-                chosen = res.iloc[selected_pos] if selected_pos is not None else res.iloc[0]
+                st.markdown(f'<div class="section-label">{len(res)} résultats trouvés</div>', unsafe_allow_html=True)
+                sel = show_table_with_select(res, "resultats.csv", key="tbl_simple")
+                chosen = res.iloc[sel] if sel is not None else None
 
-            left, right = st.columns([2.2, 1.3], gap="large")
-            with left:
-                render_big_card(chosen, query)
-            with right:
-                render_series_side(chosen)
+                if chosen is not None:
+                    st.markdown("---")
+                    c1, c2 = st.columns([2.5, 1.2], gap="large")
+                    with c1:
+                        render_result(chosen, query)
+                    with c2:
+                        render_serial(chosen)
 
+# ══════════════════════════════════════════════════════════════
 with tab2:
-    st.write("Colle une liste (1 entrée par ligne). Tu peux aussi mettre des mots-clés :")
-    st.code("H01100M\nX001L\nAB-123-CD\npelle bassin", language="text")
+    st.markdown('<div class="section-label">Une entrée par ligne (code HME, RZB, immat ou mots-clés)</div>', unsafe_allow_html=True)
 
-    raw_list = st.text_area("Liste", height=180, placeholder="1 entrée par ligne…")
-    if raw_list.strip():
-        items = [x.strip() for x in raw_list.splitlines() if x.strip()]
-        items = list(dict.fromkeys(items))  # unique en gardant l'ordre
+    raw = st.text_area(" ", height=180,
+        placeholder="H01100M\nX001L\nAB-123-CD\npelle bassin",
+        label_visibility="collapsed",
+        key="multi_input"
+    )
 
-        all_results = []
+    if raw.strip():
+        items = list(dict.fromkeys([x.strip() for x in raw.splitlines() if x.strip()]))
+        all_res = []
         for it in items:
-            r = search_df_contains(df, it)
+            r = search(df, it)
             if not r.empty:
                 rr = r.copy()
                 rr.insert(0, "RECHERCHE", it)
-                all_results.append(rr)
+                all_res.append(rr)
 
-        if not all_results:
-            st.error("❌ Aucun résultat trouvé pour la liste.")
+        if not all_res:
+            st.markdown('<div class="no-result">Aucun résultat pour la liste fournie</div>', unsafe_allow_html=True)
         else:
-            out = pd.concat(all_results, ignore_index=True)
-            st.success(f"✅ {len(out)} ligne(s) trouvée(s) (pour {len(items)} recherche(s)).")
+            out = pd.concat(all_res, ignore_index=True)
+            not_found = [it for it in items if it not in out["RECHERCHE"].values]
 
-            cols = ["RECHERCHE", "AGENCE", "PARC_HME", "PARC_RZB", "IMMATRICULATION", "LIBELLE", "COMMENTAIRE"]
-            cols = [c for c in cols if c in out.columns]
-            st.dataframe(out[cols], use_container_width=True, hide_index=True)
+            cols_show = ["RECHERCHE","AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
+            cols_show = [c for c in cols_show if c in out.columns]
 
-            csv = out[cols].to_csv(index=False, sep=";").encode("utf-8")
-            st.download_button("⬇️ Télécharger (CSV)", data=csv, file_name="multi_resultats_parc.csv", mime="text/csv")
+            # Stats
+            st.markdown(f"""
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value">{len(items)}</div>
+                    <div class="stat-label">Recherches</div>
+                </div>
+                <div class="stat-sep">·</div>
+                <div class="stat-item">
+                    <div class="stat-value">{len(items)-len(not_found)}</div>
+                    <div class="stat-label">Trouvées</div>
+                </div>
+                <div class="stat-sep">·</div>
+                <div class="stat-item">
+                    <div class="stat-value">{len(out)}</div>
+                    <div class="stat-label">Lignes</div>
+                </div>
+                {"<div class='stat-sep'>·</div><div class='stat-item'><div class='stat-value' style='color:#e8601a'>" + str(len(not_found)) + "</div><div class='stat-label'>Non trouvées</div></div>" if not_found else ""}
+            </div>
+            """, unsafe_allow_html=True)
 
+            if not_found:
+                with st.expander(f"⚠ {len(not_found)} entrée(s) sans résultat"):
+                    for x in not_found:
+                        st.markdown(f"`{x}`")
 
+            st.dataframe(out[cols_show], use_container_width=True, hide_index=True)
 
+            csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
+            st.download_button("⬇ Exporter CSV", data=csv, file_name="multi_resultats.csv", mime="text/csv")
