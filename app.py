@@ -419,107 +419,91 @@ def search(df_, query):
 def render_result(row, query):
     q = norm_text(query)
     q_immat = norm_immat(q)
+
     hme = norm_text(row.get("PARC_HME", ""))
     rzb = norm_text(row.get("PARC_RZB", ""))
 
-    matched_hme  = q in hme or (q_immat and q_immat in norm_immat(hme))
-    matched_rzb  = q in rzb or (q_immat and q_immat in norm_immat(rzb))
+    # La query matche-t-elle le champ HME ?
+    matched_hme = q in hme or (q_immat and q_immat in norm_immat(hme))
+    # La query matche-t-elle le champ RZB ?
+    matched_rzb = q in rzb or (q_immat and q_immat in norm_immat(rzb))
 
     if matched_hme:
+        # On a cherché par HME → on affiche le RZB en gros
         big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
     elif matched_rzb:
+        # On a cherché par RZB → on affiche le HME en gros
         big_code, big_tag = row.get("PARC_HME", ""), "→ N° PARC HME"
     else:
+        # Recherche par mot-clé (libellé, agence…) → on affiche le RZB par défaut
         big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
 
-    immat   = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
-    com     = clean_comment(row.get("COMMENTAIRE", "")).replace("<","<").replace(">","")
-    libelle = (row.get("LIBELLE",   "") or "").replace("<","<").replace(">","")
-    agence  = (row.get("AGENCE",    "") or "").replace("<","<").replace(">","")
-    parc_hme_str = norm_text(row.get("PARC_HME", ""))
-    parc_rzb_str = norm_text(row.get("PARC_RZB", ""))
+    immat = "" if is_blank(row.get("IMMATRICULATION", "")) else row.get("IMMATRICULATION", "")
+    com = clean_comment(row.get("COMMENTAIRE", "")).replace("<","&lt;").replace(">","&gt;")
+    libelle = (row.get("LIBELLE","") or "").replace("<","&lt;").replace(">","&gt;")
+    agence = (row.get("AGENCE","") or "").replace("<","&lt;").replace(">","&gt;")
+    parc_hme = norm_text(row.get("PARC_HME",""))
+    parc_rzb = norm_text(row.get("PARC_RZB",""))
 
-    # ──────────────────────────────────────────────────────────────
-    # Construction par morceaux (plus sûr et plus lisible)
-    # ──────────────────────────────────────────────────────────────
-    html_parts = []
+    immat_html = f'''<div class="result-row"><span class="result-label">Immatriculation</span><span class="result-value mono">{immat}</span></div>''' if immat else ""
+    com_html = f'''<div class="result-comment">💬 {com}</div>''' if com else ""
 
-    # Titre / tag + gros code (comme dans ton premier rendu)
-    html_parts.append(f'<div class="big-tag">{big_tag}</div>')
-    html_parts.append(f'<div class="big-code">{big_code}</div>')
-
-    # HME
-    if parc_hme_str:
-        html_parts.append('<div class="result-row">')
-        html_parts.append('<span class="result-label">HME</span>')
-        html_parts.append(f'<span class="result-value">{parc_hme_str}</span>')
-        html_parts.append('</div>')
-
-    # RZB
-    if parc_rzb_str:
-        html_parts.append('<div class="result-row">')
-        html_parts.append('<span class="result-label">RZB</span>')
-        html_parts.append(f'<span class="result-value">{parc_rzb_str}</span>')
-        html_parts.append('</div>')
-
-    # Immatriculation
-    if immat:
-        html_parts.append('<div class="result-row">')
-        html_parts.append('<span class="result-label">Immatriculation</span>')
-        html_parts.append(f'<span class="result-value">{immat}</span>')
-        html_parts.append('</div>')
-
-    # Agence
-    if agence:
-        html_parts.append('<div class="result-row">')
-        html_parts.append('<span class="result-label">Agence</span>')
-        html_parts.append(f'<span class="result-value">{agence}</span>')
-        html_parts.append('</div>')
-
-    # Libellé
-    if libelle:
-        html_parts.append('<div class="result-row">')
-        html_parts.append('<span class="result-label">Libellé</span>')
-        html_parts.append(f'<span class="result-value">{libelle}</span>')
-        html_parts.append('</div>')
-
-    # Commentaire
-    if com:
-        html_parts.append(f'<div class="result-comment">💬 {com}</div>')
-
-    # Assemblage final
-    html = ''.join(html_parts)
-
+    html = f'''
+    <div class="result-card">
+        <div class="result-tag">{big_tag}</div>
+        <div class="result-main-code">{big_code}</div>
+        <div class="result-row">
+            <span class="result-label">HME</span>
+            <span class="result-value mono">{parc_hme}</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">RZB</span>
+            <span class="result-value mono">{parc_rzb}</span>
+        </div>
+        {immat_html}
+        <div class="result-row">
+            <span class="result-label">Agence</span>
+            <span class="result-value">{agence}</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">Libellé</span>
+            <span class="result-value">{libelle}</span>
+        </div>
+        {com_html}
+    </div>
+    '''
     st.markdown(html, unsafe_allow_html=True)
 
 def render_serial(row):
     s1 = clean_serial(row.get("N° SERIE", ""))
     s2 = clean_serial(row.get("N° SERIE GRUE", ""))
+
     if not s1 and not s2:
-        st.markdown("""Numéros de sérieAucun numéro enregistré        """, unsafe_allow_html=True)
+        st.markdown("""
+        <div class="serie-card">
+            <div class="serie-card-title">Numéros de série</div>
+            <div class="serie-empty">Aucun numéro enregistré</div>
+        </div>
+        """, unsafe_allow_html=True)
         return
-    
-    html_parts = ['<div class="result-row"><span class="result-label">Numéros de série</span></div>']
-    
-    if s1:
-        html_parts.append('<div class="result-row">')
-        html_parts.append('<span class="result-label">N° Série</span>')
-        html_parts.append(f'<span class="result-value">{s1}</span>')
-        html_parts.append('</div>')
-    
-    if s2:
-        html_parts.append('<div class="result-row">')
-        html_parts.append('<span class="result-label">N° Série Grue</span>')
-        html_parts.append(f'<span class="result-value">{s2}</span>')
-        html_parts.append('</div>')
-    
-    html = ''.join(html_parts)
-    st.markdown(html, unsafe_allow_html=True)
+
+    s1_html = f'<div class="serie-block"><div class="serie-block-label">N° Série</div><div class="serie-block-value">{s1}</div></div>' if s1 else ""
+    s2_html = f'<div class="serie-block"><div class="serie-block-label">N° Série Grue</div><div class="serie-block-value">{s2}</div></div>' if s2 else ""
+    div = '<div class="serie-divider"></div>' if s1 and s2 else ""
+
+    st.markdown(f"""
+    <div class="serie-card">
+        <div class="serie-card-title">Numéros de série</div>
+        {s1_html}{div}{s2_html}
+    </div>
+    """, unsafe_allow_html=True)
 
 def show_table_with_select(res, filename, key):
     cols = ["AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
     cols = [c for c in cols if c in res.columns]
-    st.markdown('Cliquez une ligne pour la détailler', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-label">Cliquez une ligne pour la détailler</div>', unsafe_allow_html=True)
+
     event = st.dataframe(
         res[cols],
         use_container_width=True,
@@ -528,8 +512,10 @@ def show_table_with_select(res, filename, key):
         on_select="rerun",
         key=key
     )
+
     csv = res[cols].to_csv(index=False, sep=";").encode("utf-8")
     st.download_button("⬇ Exporter CSV", data=csv, file_name=filename, mime="text/csv", key=f"dl_{key}")
+
     selected_pos = None
     try:
         if event and hasattr(event, "selection") and event.selection:
@@ -635,18 +621,40 @@ with tab2:
                 all_res.append(rr)
 
         if not all_res:
-            st.markdown('Aucun résultat pour la liste fournie', unsafe_allow_html=True)
+            st.markdown('<div class="no-result">Aucun résultat pour la liste fournie</div>', unsafe_allow_html=True)
         else:
             out = pd.concat(all_res, ignore_index=True)
             not_found = [it for it in items if it not in out["RECHERCHE"].values]
+
             cols_show = ["RECHERCHE","AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
             cols_show = [c for c in cols_show if c in out.columns]
+
             # Stats
-            st.markdown(f"""{len(items)}Recherches·{len(items)-len(not_found)}Trouvées·{len(out)}Lignes{"·" + str(len(not_found)) + "Non trouvées" if not_found else ""}            """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value">{len(items)}</div>
+                    <div class="stat-label">Recherches</div>
+                </div>
+                <div class="stat-sep">·</div>
+                <div class="stat-item">
+                    <div class="stat-value">{len(items)-len(not_found)}</div>
+                    <div class="stat-label">Trouvées</div>
+                </div>
+                <div class="stat-sep">·</div>
+                <div class="stat-item">
+                    <div class="stat-value">{len(out)}</div>
+                    <div class="stat-label">Lignes</div>
+                </div>
+                {"<div class='stat-sep'>·</div><div class='stat-item'><div class='stat-value' style='color:#e8601a'>" + str(len(not_found)) + "</div><div class='stat-label'>Non trouvées</div></div>" if not_found else ""}
+            </div>
+            """, unsafe_allow_html=True)
+
             if not_found:
                 with st.expander(f"⚠ {len(not_found)} entrée(s) sans résultat"):
                     for x in not_found:
                         st.markdown(f"`{x}`")
+
             st.dataframe(out[cols_show], use_container_width=True, hide_index=True)
 
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
