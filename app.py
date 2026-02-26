@@ -512,7 +512,14 @@ def show_table_with_select(res, filename, key):
     cols = ["AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
     cols = [c for c in cols if c in res.columns]
     st.markdown('Cliquez une ligne pour la détailler', unsafe_allow_html=True)
-    event = st.dataframe(a        res[cols],        use_container_width=True,        hide_index=True,        selection_mode="single-row",        on_select="rerun",        key=key    )
+    event = st.dataframe(
+        res[cols],
+        use_container_width=True,
+        hide_index=True,
+        selection_mode="single-row",
+        on_select="rerun",
+        key=key
+    )
     csv = res[cols].to_csv(index=False, sep=";").encode("utf-8")
     st.download_button("⬇ Exporter CSV", data=csv, file_name=filename, mime="text/csv", key=f"dl_{key}")
     selected_pos = None
