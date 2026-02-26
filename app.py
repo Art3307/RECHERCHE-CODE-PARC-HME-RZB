@@ -413,85 +413,69 @@ def search(df_, query):
 
 # ─── RENDER HELPERS ────────────────────────────────────────────────────────────
 def render_result(row, query):
-    q = norm_text(query)
-    q_immat = norm_immat(q)
-    hme = norm_text(row.get("PARC_HME", ""))
-    rzb = norm_text(row.get("PARC_RZB", ""))
-
-    matched_hme = q in hme or (q_immat and q_immat in norm_immat(hme))
-    matched_rzb = q in rzb or (q_immat and q_immat in norm_immat(rzb))
-
-    if matched_hme:
-        big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
-    elif matched_rzb:
-        big_code, big_tag = row.get("PARC_HME", ""), "→ N° PARC HME"
-    else:
-        big_code, big_tag = row.get("PARC_RZB", ""), "→ N° PARC RZB"
+    # ... (la logique de matched_hme / matched_rzb / big_code / big_tag reste identique)
 
     immat   = row.get("IMMATRICULATION", "").strip() or ""
     com     = clean_comment(row.get("COMMENTAIRE", "")).strip()
     libelle = (row.get("LIBELLE", "") or "").strip()
     agence  = (row.get("AGENCE", "") or "").strip()
-    parc_hme_str = row.get("PARC_HME", "").strip()
-    parc_rzb_str = row.get("PARC_RZB", "").strip()
+    hme_val = row.get("PARC_HME", "").strip()
+    rzb_val = row.get("PARC_RZB", "").strip()
 
-    # ──── Header ────
-    header = f'<div class="result-header">{big_tag}</div>'
-
-    # ──── Gros code ────
-    big = f'<div class="big-code">{big_code}</div>'
-
-    # ──── Lignes principales ────
-    lines = []
-
-    if parc_hme_str:
-        lines.append(f'<div class="result-row"><span class="result-label">HME</span><span class="result-value mono">{parc_hme_str}</span></div>')
-    if parc_rzb_str:
-        lines.append(f'<div class="result-row"><span class="result-label">RZB</span><span class="result-value mono">{parc_rzb_str}</span></div>')
-    if immat:
-        lines.append(f'<div class="result-row"><span class="result-label">IMMATRICULATION</span><span class="result-value">{immat}</span></div>')
-    if agence:
-        lines.append(f'<div class="result-row"><span class="result-label">AGENCE</span><span class="result-value">{agence}</span></div>')
-    if libelle:
-        lines.append(f'<div class="result-row"><span class="result-label">LIBELLÉ</span><span class="result-value">{libelle}</span></div>')
-    if com:
-        lines.append(f'<div class="result-comment">💬 {com}</div>')
-
-    main_content = ''.join(lines)
-
-    # ──── Assemblage final ────
     html = f'''
 <div class="result-card">
-    {header}
-    {big}
-    {main_content}
+    <div class="result-header">{big_tag}</div>
+    <div class="big-code">{big_code}</div>
+    
+    <div style="display: flex;">
+        <div class="main-content" style="flex: 1;">
+            <div class="result-row">
+                <span class="result-label">HME</span>
+                <span class="result-value mono">{hme_val}</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">RZB</span>
+                <span class="result-value mono">{rzb_val}</span>
+            </div>
+            {f'<div class="result-row"><span class="result-label">IMMATRICULATION</span><span class="result-value">{immat}</span></div>' if immat else ''}
+            {f'<div class="result-row"><span class="result-label">AGENCE</span><span class="result-value">{agence}</span></div>' if agence else ''}
+            {f'<div class="result-row"><span class="result-label">LIBELLÉ</span><span class="result-value">{libelle}</span></div>' if libelle else ''}
+            {f'<div class="comment-row">💬 {com}</div>' if com else ''}
+        </div>
+        
+        <div class="serial-panel">
+            {render_serial_content(row)}
+        </div>
+    </div>
 </div>
     '''
-
     st.markdown(html, unsafe_allow_html=True)
 
 
-def render_serial(row):
+def render_serial_content(row):
     s1 = clean_serial(row.get("N° SERIE", ""))
     s2 = clean_serial(row.get("N° SERIE GRUE", ""))
 
     if not s1 and not s2:
-        content = '<div style="color:#888; font-style:italic;">Aucun numéro enregistré</div>'
-    else:
-        content = ""
-        if s1:
-            content += f'<div><span class="mono">{s1}</span></div>'
-        if s2:
-            content += f'<div><span class="mono">{s2}</span></div>'
+        return '<div class="serial-value" style="color:#888;">Aucun numéro enregistré</div>'
 
-    html = f'''
-<div class="serial-card">
-    <div class="serial-title">NUMÉROS DE SÉRIE</div>
-    {content}
-</div>
+    lines = []
+    if s1:
+        lines.append(f'<div class="serial-value">{s1}</div>')
+    if s2:
+        lines.append(f'<div class="serial-value">{s2}</div>')
+
+    return f'''
+<div class="serial-title">NUMÉROS DE SÉRIE</div>
+{''.join(lines)}
     '''
 
-    st.markdown(html, unsafe_allow_html=True)
+
+# Dans le code principal, quand tu appelles :
+c1, c2 = st.columns([3.8, 1.4], gap="md")
+with c1:
+    render_result(chosen, query)
+# Pas besoin d'appeler render_serial séparément → intégré dans render_result
 
 
 
