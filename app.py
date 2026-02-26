@@ -264,7 +264,7 @@ def render_serial_content(row):
 
 
 # Dans le code principal, quand tu appelles :
-c1, c2 = st.columns([3.8, 1.4], gap=20)
+c1, c2 = st.columns([3.8, 1.4], gap="20px")
 with c1:
     render_result(chosen, query)
 # Pas besoin d'appeler render_serial séparément → intégré dans render_result
@@ -406,3 +406,4 @@ with tab2:
 
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇ Exporter CSV", data=csv, file_name="multi_resultats.csv", mime="text/csv")
+
