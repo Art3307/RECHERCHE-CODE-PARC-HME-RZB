@@ -511,10 +511,8 @@ Aucun numéro enregistré
 def show_table_with_select(res, filename, key):
     cols = ["AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
     cols = [c for c in cols if c in res.columns]
-    st.markdown('
-Cliquez une ligne pour la détailler
-', unsafe_allow_html=True)
-    event = st.dataframe(
+    st.markdown('Cliquez une ligne pour la détailler', unsafe_allow_html=True)
+    event = st.dataframe(a
         res[cols],
         use_container_width=True,
         hide_index=True,
