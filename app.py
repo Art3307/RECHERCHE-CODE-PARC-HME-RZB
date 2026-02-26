@@ -294,9 +294,7 @@ Aucun résultat pour « {query} »
                 with c2:
                     render_serial(chosen)
             else:
-                st.markdown(f'
-{len(res)} résultats trouvés
-', unsafe_allow_html=True)
+                st.markdown(f'{len(res)} résultats trouvés', unsafe_allow_html=True)
                 sel = show_table_with_select(res, "resultats.csv", key="tbl_simple")
                 chosen = res.iloc[sel] if sel is not None else None
                 if chosen is not None:
@@ -355,4 +353,5 @@ Non trouvées
             st.dataframe(out[cols_show], use_container_width=True, hide_index=True)
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇ Exporter CSV", data=csv, file_name="multi_resultats.csv", mime="text/csv")
+
 
