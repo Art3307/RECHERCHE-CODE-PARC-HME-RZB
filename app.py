@@ -264,7 +264,7 @@ def render_serial_content(row):
 
 
 # Dans le code principal, quand tu appelles :
-c1, c2 = st.columns([3.8, 1.4], gap="md")
+c1, c2 = st.columns([3.8, 1.4], gap=20)
 with c1:
     render_result(chosen, query)
 # Pas besoin d'appeler render_serial séparément → intégré dans render_result
