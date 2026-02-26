@@ -621,40 +621,20 @@ with tab2:
                 all_res.append(rr)
 
         if not all_res:
-            st.markdown('<div class="no-result">Aucun résultat pour la liste fournie</div>', unsafe_allow_html=True)
+            st.markdown('
+Aucun résultat pour la liste fournie
+', unsafe_allow_html=True)
         else:
             out = pd.concat(all_res, ignore_index=True)
             not_found = [it for it in items if it not in out["RECHERCHE"].values]
-
             cols_show = ["RECHERCHE","AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
             cols_show = [c for c in cols_show if c in out.columns]
-
             # Stats
-            st.markdown(f"""
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <div class="stat-value">{len(items)}</div>
-                    <div class="stat-label">Recherches</div>
-                </div>
-                <div class="stat-sep">·</div>
-                <div class="stat-item">
-                    <div class="stat-value">{len(items)-len(not_found)}</div>
-                    <div class="stat-label">Trouvées</div>
-                </div>
-                <div class="stat-sep">·</div>
-                <div class="stat-item">
-                    <div class="stat-value">{len(out)}</div>
-                    <div class="stat-label">Lignes</div>
-                </div>
-                {"<div class='stat-sep'>·</div><div class='stat-item'><div class='stat-value' style='color:#e8601a'>" + str(len(not_found)) + "</div><div class='stat-label'>Non trouvées</div></div>" if not_found else ""}
-            </div>
-            """, unsafe_allow_html=True)
-
+            st.markdown(f"""{len(items)}Recherches·{len(items)-len(not_found)}Trouvées·{len(out)}Lignes{"·" + str(len(not_found)) + "Non trouvées" if not_found else ""}            """, unsafe_allow_html=True)
             if not_found:
                 with st.expander(f"⚠ {len(not_found)} entrée(s) sans résultat"):
                     for x in not_found:
                         st.markdown(f"`{x}`")
-
             st.dataframe(out[cols_show], use_container_width=True, hide_index=True)
 
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
