@@ -621,9 +621,7 @@ with tab2:
                 all_res.append(rr)
 
         if not all_res:
-            st.markdown('
-Aucun résultat pour la liste fournie
-', unsafe_allow_html=True)
+            st.markdown('Aucun résultat pour la liste fournie', unsafe_allow_html=True)
         else:
             out = pd.concat(all_res, ignore_index=True)
             not_found = [it for it in items if it not in out["RECHERCHE"].values]
