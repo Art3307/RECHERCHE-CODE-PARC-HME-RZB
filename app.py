@@ -334,14 +334,7 @@ Recherches
 Trouvées
 ·
 {len(out)}
-Lignes
-{
-"·
-" + str(len(not_found)) + "
-Non trouvées
-" if not_found else ""
-}
-            """, unsafe_allow_html=True)
+Lignes{"·" + str(len(not_found)) + "Non trouvées" if not_found else ""}            """, unsafe_allow_html=True)
             if not_found:
                 with st.expander(f"⚠ {len(not_found)} entrée(s) sans résultat"):
                     for x in not_found:
@@ -349,6 +342,7 @@ Non trouvées
             st.dataframe(out[cols_show], use_container_width=True, hide_index=True)
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇ Exporter CSV", data=csv, file_name="multi_resultats.csv", mime="text/csv")
+
 
 
 
