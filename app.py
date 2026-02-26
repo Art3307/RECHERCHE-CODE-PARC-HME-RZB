@@ -587,8 +587,8 @@ with tab1:
 
     st.markdown("""
     <div class="hint-row">
-        <span class="hint-chip">HME → commence par H</span>
-        <span class="hint-chip">RZB → commence par X ou P</span>
+        <span class="hint-chip">HME</span>
+        <span class="hint-chip">RZB</span>
         <span class="hint-chip">Immatriculation</span>
         <span class="hint-chip">Mots-clés libres</span>
     </div>
