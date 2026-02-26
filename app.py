@@ -3,7 +3,7 @@ import pandas as pd
 import re
 
 st.set_page_config(
-    page_title="Parc HME ↔ RZB",
+    page_title="Parc HME ↔ RZB https://upload.wikimedia.org/wikipedia/commons/c/ce/Logo_Razel-Bec.jpg",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
