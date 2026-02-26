@@ -223,9 +223,7 @@ Aucun numéro enregistré
 def show_table_with_select(res, filename, key):
     cols = ["AGENCE","PARC_HME","PARC_RZB","IMMATRICULATION","LIBELLE","COMMENTAIRE"]
     cols = [c for c in cols if c in res.columns]
-    st.markdown('
-Cliquez une ligne pour la détailler
-', unsafe_allow_html=True)
+    st.markdown('Cliquez une ligne pour la détailler', unsafe_allow_html=True)
     event = st.dataframe(
         res[cols],
         use_container_width=True,
@@ -357,3 +355,4 @@ Non trouvées
             st.dataframe(out[cols_show], use_container_width=True, hide_index=True)
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇ Exporter CSV", data=csv, file_name="multi_resultats.csv", mime="text/csv")
+
