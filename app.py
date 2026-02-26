@@ -406,4 +406,3 @@ with tab2:
 
             csv = out[cols_show].to_csv(index=False, sep=";").encode("utf-8")
             st.download_button("⬇ Exporter CSV", data=csv, file_name="multi_resultats.csv", mime="text/csv")
-
