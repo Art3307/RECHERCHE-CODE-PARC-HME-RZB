@@ -442,22 +442,25 @@ def render_result(row, query):
     com = clean_comment(row.get("COMMENTAIRE", "")).replace("<","&lt;").replace(">","&gt;")
     libelle = (row.get("LIBELLE","") or "").replace("<","&lt;").replace(">","&gt;")
     agence = (row.get("AGENCE","") or "").replace("<","&lt;").replace(">","&gt;")
+    parc_hme = norm_text(row.get("PARC_HME",""))
+    parc_rzb = norm_text(row.get("PARC_RZB",""))
 
-    com_html = f'<div class="result-comment">💬 {com}</div>' if com else ""
+    immat_html = f'''<div class="result-row"><span class="result-label">Immatriculation</span><span class="result-value mono">{immat}</span></div>''' if immat else ""
+    com_html = f'''<div class="result-comment">💬 {com}</div>''' if com else ""
 
-    st.markdown(f"""
+    html = f'''
     <div class="result-card">
         <div class="result-tag">{big_tag}</div>
         <div class="result-main-code">{big_code}</div>
         <div class="result-row">
             <span class="result-label">HME</span>
-            <span class="result-value mono">{row.get('PARC_HME','')}</span>
+            <span class="result-value mono">{parc_hme}</span>
         </div>
         <div class="result-row">
             <span class="result-label">RZB</span>
-            <span class="result-value mono">{row.get('PARC_RZB','')}</span>
+            <span class="result-value mono">{parc_rzb}</span>
         </div>
-        {"<div class='result-row'><span class='result-label'>Immatriculation</span><span class='result-value mono'>" + immat + "</span></div>" if immat else ""}
+        {immat_html}
         <div class="result-row">
             <span class="result-label">Agence</span>
             <span class="result-value">{agence}</span>
@@ -468,7 +471,8 @@ def render_result(row, query):
         </div>
         {com_html}
     </div>
-    """, unsafe_allow_html=True)
+    '''
+    st.markdown(html, unsafe_allow_html=True)
 
 def render_serial(row):
     s1 = clean_serial(row.get("N° SERIE", ""))
