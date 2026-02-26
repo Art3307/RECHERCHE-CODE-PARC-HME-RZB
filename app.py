@@ -445,34 +445,68 @@ def render_result(row, query):
     parc_hme = norm_text(row.get("PARC_HME",""))
     parc_rzb = norm_text(row.get("PARC_RZB",""))
 
-    immat_html = f'''<div class="result-row"><span class="result-label">Immatriculation</span><span class="result-value mono">{immat}</span></div>''' if immat else ""
-    com_html = f'''<div class="result-comment">💬 {com}</div>''' if com else ""
+# ... (le reste de la logique pour big_tag, big_code, etc.)
 
-    html = f'''
-    <div class="result-card">
-        <div class="result-tag">{big_tag}</div>
-        <div class="result-main-code">{big_code}</div>
-        <div class="result-row">
-            <span class="result-label">HME</span>
-            <span class="result-value mono">{parc_hme}</span>
-        </div>
-        <div class="result-row">
-            <span class="result-label">RZB</span>
-            <span class="result-value mono">{parc_rzb}</span>
-        </div>
-        {immat_html}
-        <div class="result-row">
-            <span class="result-label">Agence</span>
-            <span class="result-value">{agence}</span>
-        </div>
-        <div class="result-row">
-            <span class="result-label">Libellé</span>
-            <span class="result-value">{libelle}</span>
-        </div>
-        {com_html}
-    </div>
-    '''
-    st.markdown(html, unsafe_allow_html=True)
+html_parts = []
+
+# Tag + gros code (toujours affichés)
+html_parts.append(f'<div class="result-tag">{big_tag}</div>')
+html_parts.append(f'<div class="result-main-code">{big_code}</div>')
+
+# HME → seulement si non vide
+if parc_hme:
+    html_parts.append(f'''
+<div class="result-row">
+    <span class="result-label">HME</span>
+    <span class="result-value mono">{parc_hme}</span>
+</div>
+''')
+
+# RZB → idem
+if parc_rzb:
+    html_parts.append(f'''
+<div class="result-row">
+    <span class="result-label">RZB</span>
+    <span class="result-value mono">{parc_rzb}</span>
+</div>
+''')
+
+# Immatriculation
+if immat:
+    html_parts.append(f'''
+<div class="result-row">
+    <span class="result-label">Immatriculation</span>
+    <span class="result-value">{immat}</span>
+</div>
+''')
+
+# Agence
+if agence:
+    html_parts.append(f'''
+<div class="result-row">
+    <span class="result-label">Agence</span>
+    <span class="result-value">{agence}</span>
+</div>
+''')
+
+# Libellé
+if libelle:
+    html_parts.append(f'''
+<div class="result-row">
+    <span class="result-label">Libellé</span>
+    <span class="result-value">{libelle}</span>
+</div>
+''')
+
+# Commentaire (spécial)
+if com:
+    html_parts.append(f'''
+<div class="result-comment">○ {com}</div>
+''')
+
+# Assemblage final
+html = ''.join(html_parts)
+st.markdown(f'<div class="result-card">{html}</div>', unsafe_allow_html=True)
 
 def render_serial(row):
     s1 = clean_serial(row.get("N° SERIE", ""))
